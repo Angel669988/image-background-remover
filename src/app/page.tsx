@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 
 export default function Home() {
@@ -9,7 +9,24 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 检查登录状态
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) setUser(JSON.parse(storedUser));
+    (window as any).handleCredentialResponse = (response: any) => {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      localStorage.setItem('user', JSON.stringify(payload));
+      setUser(payload);
+    };
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -107,14 +124,40 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Google Login Script */}
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
+      
       {/* Header */}
-      <header className="py-8 text-center">
-        <h1 className="text-4xl font-bold text-white mb-2">
-          🖼️ Image Background Remover
-        </h1>
-        <p className="text-slate-400">
-          Upload an image to remove its background automatically
-        </p>
+      <header className="py-4 flex justify-between items-center px-8">
+        <div className="text-center flex-1">
+          <h1 className="text-3xl font-bold text-white mb-1">
+            🖼️ Image Background Remover
+          </h1>
+          <p className="text-slate-400 text-sm">
+            Upload an image to remove its background automatically
+          </p>
+        </div>
+        
+        {/* Login / User Info */}
+        <div>
+          {user ? (
+            <div className="flex items-center gap-3 bg-slate-800 px-3 py-2 rounded-full">
+              {user.picture && (
+                <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full" />
+              )}
+              <span className="text-white text-sm">{user.name}</span>
+              <button onClick={logout} className="text-slate-400 hover:text-white text-xs">
+                退出
+              </button>
+            </div>
+          ) : (
+            <div id="g_id_onload"
+                 data-client_id="290290107873-s6cvqth9pldiuni09idc4d5cuvuas9bg.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 pb-12">
@@ -249,3 +292,4 @@ export default function Home() {
     </div>
   );
 }
+
